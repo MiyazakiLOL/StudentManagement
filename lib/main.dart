@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
+<<<<<<< HEAD
 import 'study_info_screen.dart';
+=======
+
+import 'screens/home_page.dart';
+>>>>>>> origin/main
 
 void main() {
   runApp(const MyApp());
@@ -11,6 +16,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+<<<<<<< HEAD
       title: 'Quản lý sinh viên',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
@@ -78,3 +84,14 @@ class MainMenu extends StatelessWidget {
     );
   }
 }
+=======
+      title: 'Student Manager',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+      ),
+      home: const HomePage(),
+    );
+  }
+}
+>>>>>>> origin/main

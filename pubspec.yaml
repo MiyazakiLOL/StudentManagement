@@ -1,29 +1,20 @@
 name: qlsv
-description: "Dự án Quản lý sinh viên - TH5"
+description: "Du an Quan ly sinh vien"
 publish_to: 'none'
-
 version: 1.0.0+1
 
 environment:
-  # Sửa dòng này để tương thích với Flutter 3.38.x bạn vừa tải
   sdk: '>=3.0.0 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
-
   cupertino_icons: ^1.0.8
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-
-  # Hạ cấp lints xuống 3.0.0 để tránh xung đột với SDK hiện tại
   flutter_lints: ^3.0.0
 
 flutter:
   uses-material-design: true
-
-  # Nếu bạn có dùng hình ảnh thì thêm ở đây, nếu không cứ để mặc định
-  # assets:
-  #   - assets/images/

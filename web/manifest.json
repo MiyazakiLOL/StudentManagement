@@ -1,6 +1,11 @@
 {
+<<<<<<< HEAD
     "name": "qlsv",
     "short_name": "qlsv",
+=======
+    "name": "student_management",
+    "short_name": "student_management",
+>>>>>>> origin/main
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
