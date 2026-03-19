@@ -1,547 +1,204 @@
 import 'package:flutter/material.dart';
+import '../models/student.dart';
+import '../services/student_api.dart';
+import '../config/app_config.dart';
 
 class StudentProfileManagementPage extends StatefulWidget {
   const StudentProfileManagementPage({super.key});
 
   @override
-  State<StudentProfileManagementPage> createState() =>
-      _StudentProfileManagementPageState();
+  State<StudentProfileManagementPage> createState() => _StudentProfileManagementPageState();
 }
 
-class _StudentProfileManagementPageState
-    extends State<StudentProfileManagementPage> {
+class _StudentProfileManagementPageState extends State<StudentProfileManagementPage> {
   final _formKey = GlobalKey<FormState>();
-  final _scrollController = ScrollController();
-
-  final _fullNameController = TextEditingController();
+  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
-  final _addressController = TextEditingController();
-
-  String? _gender;
-  final List<_StudentProfile> _profiles = <_StudentProfile>[];
-  String? _selectedId;
-
-  bool get _hasSelection => _selectedId != null;
+  String _selectedGender = 'Nam';
+  
+  late final StudentApi _api;
+  List<Student> _students = [];
+  bool _isLoading = true;
+  Student? _editingStudent;
 
   @override
-  void dispose() {
-    _scrollController.dispose();
-    _fullNameController.dispose();
-    _emailController.dispose();
-    _phoneController.dispose();
-    _addressController.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+    _api = StudentApi(baseUrl: AppConfig.apiBaseUrl, studentsPath: AppConfig.studentsPath);
+    _loadData();
   }
 
-  void _showSuccess(String message) {
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
-    );
+  Future<void> _loadData() async {
+    setState(() => _isLoading = true);
+    try {
+      final data = await _api.fetchStudents();
+      setState(() => _students = data);
+    } catch (e) {
+      debugPrint("Lỗi tải danh sách: $e");
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
 
-  void _resetForm() {
-    FocusScope.of(context).unfocus();
-    _formKey.currentState?.reset();
-    setState(() {
-      _selectedId = null;
-      _gender = null;
-      _fullNameController.clear();
-      _emailController.clear();
-      _phoneController.clear();
-      _addressController.clear();
-    });
-  }
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
 
-  void _loadProfileToForm(_StudentProfile profile) {
-    FocusScope.of(context).unfocus();
-    setState(() {
-      _selectedId = profile.id;
-      _gender = profile.gender.trim().isEmpty ? null : profile.gender;
-      _fullNameController.text = profile.fullName;
-      _emailController.text = profile.email;
-      _phoneController.text = profile.phone;
-      _addressController.text = profile.address;
-    });
-    _scrollController.animateTo(
-      0,
-      duration: const Duration(milliseconds: 220),
-      curve: Curves.easeOutCubic,
-    );
-  }
-
-  void _addProfile() {
-    final isValid = _formKey.currentState?.validate() ?? false;
-    if (!isValid) return;
-
-    final profile = _StudentProfile(
-      id: DateTime.now().microsecondsSinceEpoch.toString(),
-      fullName: _fullNameController.text.trim(),
-      email: _emailController.text.trim(),
-      phone: _phoneController.text.trim(),
-      gender: (_gender ?? '').trim(),
-      address: _addressController.text.trim(),
+    final student = Student(
+      id: _editingStudent?.id ?? '',
+      name: _nameController.text,
+      email: _emailController.text,
+      phone: _phoneController.text,
+      gender: _selectedGender,
     );
 
-    setState(() {
-      _profiles.insert(0, profile);
-    });
-
-    _showSuccess('Đã thêm sinh viên');
-    _resetForm();
+    try {
+      if (_editingStudent == null) {
+        await _api.createStudent(student);
+      } else {
+        await _api.updateStudent(student);
+      }
+      _clearForm();
+      _loadData(); // Load lại danh sách sau khi lưu
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lưu thành công!')));
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi API: $e')));
+    }
   }
 
-  void _updateProfile() {
-    if (_selectedId == null) return;
-    final isValid = _formKey.currentState?.validate() ?? false;
-    if (!isValid) return;
-
-    final index = _profiles.indexWhere((p) => p.id == _selectedId);
-    if (index < 0) return;
-
-    final updated = _profiles[index].copyWith(
-      fullName: _fullNameController.text.trim(),
-      email: _emailController.text.trim(),
-      phone: _phoneController.text.trim(),
-      gender: (_gender ?? '').trim(),
-      address: _addressController.text.trim(),
-    );
-
-    setState(() {
-      _profiles[index] = updated;
-    });
-
-    _showSuccess('Đã cập nhật sinh viên');
-    _resetForm();
-  }
-
-  Future<void> _confirmAndDelete() async {
-    if (_selectedId == null) return;
-    final index = _profiles.indexWhere((p) => p.id == _selectedId);
-    if (index < 0) return;
-
-    final name = _profiles[index].fullName.trim();
-    final ok = await showDialog<bool>(
+  Future<void> _confirmDelete(Student s) async {
+    final bool? confirm = await showDialog<bool>(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          icon: const Icon(Icons.warning_amber_rounded),
-          title: const Text('Xác nhận xóa'),
-          content: Text(
-            name.isEmpty
-                ? 'Bạn có chắc muốn xóa sinh viên này?'
-                : 'Bạn có chắc muốn xóa “$name”?',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Hủy'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              style: FilledButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.error,
-                foregroundColor: Theme.of(context).colorScheme.onError,
-              ),
-              child: const Text('Xóa'),
-            ),
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.red),
+            SizedBox(width: 10),
+            Text('Xác nhận xóa'),
           ],
-        );
-      },
+        ),
+        content: Text('Bạn có chắc chắn muốn xóa sinh viên "${s.name}" khỏi hệ thống không?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Hủy', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Xóa ngay', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
     );
 
-    if (ok != true) return;
-
-    setState(() {
-      _profiles.removeAt(index);
-    });
-    _showSuccess('Đã xóa sinh viên');
-    _resetForm();
+    if (confirm == true) {
+      try {
+        // MockAPI cần ID để xóa: /students/:id
+        await _api.deleteStudent(int.parse(s.id));
+        _loadData(); // Tải lại danh sách sau khi xóa thành công
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Đã xóa dữ liệu thành công'), backgroundColor: Colors.green),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Lỗi khi xóa: Vui lòng thử lại'), backgroundColor: Colors.red),
+          );
+        }
+      }
+    }
   }
 
-  ButtonStyle _buttonStyle(BuildContext context) {
-    return FilledButton.styleFrom(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      animationDuration: const Duration(milliseconds: 140),
-    );
+  void _clearForm() {
+    _nameController.clear();
+    _emailController.clear();
+    _phoneController.clear();
+    _selectedGender = 'Nam';
+    _editingStudent = null;
+    setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final radius = BorderRadius.circular(22);
-
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Quản lý hồ sơ sinh viên'),
-        backgroundColor: colorScheme.inversePrimary,
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          controller: _scrollController,
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Card(
-                shape: RoundedRectangleBorder(borderRadius: radius),
-                clipBehavior: Clip.antiAlias,
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.person_outline,
-                              color: colorScheme.primary,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Form thông tin',
-                              style: Theme.of(context).textTheme.titleMedium
-                                  ?.copyWith(fontWeight: FontWeight.w700),
-                            ),
-                            const Spacer(),
-                            if (_hasSelection)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: colorScheme.primaryContainer,
-                                  borderRadius: BorderRadius.circular(999),
-                                ),
-                                child: Text(
-                                  'Đang chọn',
-                                  style: TextStyle(
-                                    color: colorScheme.onPrimaryContainer,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          controller: _fullNameController,
-                          textInputAction: TextInputAction.next,
-                          decoration: const InputDecoration(
-                            labelText: 'Họ tên',
-                            prefixIcon: Icon(Icons.badge_outlined),
-                            border: OutlineInputBorder(),
-                          ),
-                          validator: (value) {
-                            final text = value?.trim() ?? '';
-                            if (text.isEmpty) return 'Vui lòng nhập họ tên';
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          controller: _emailController,
-                          keyboardType: TextInputType.emailAddress,
-                          textInputAction: TextInputAction.next,
-                          decoration: const InputDecoration(
-                            labelText: 'Email',
-                            prefixIcon: Icon(Icons.email_outlined),
-                            border: OutlineInputBorder(),
-                          ),
-                          validator: (value) {
-                            final text = value?.trim() ?? '';
-                            if (text.isEmpty) return 'Vui lòng nhập email';
-                            final ok = RegExp(
-                              r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
-                            ).hasMatch(text);
-                            if (!ok) return 'Email không hợp lệ';
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          controller: _phoneController,
-                          keyboardType: TextInputType.phone,
-                          textInputAction: TextInputAction.next,
-                          decoration: const InputDecoration(
-                            labelText: 'SĐT',
-                            prefixIcon: Icon(Icons.phone_outlined),
-                            border: OutlineInputBorder(),
-                          ),
-                          validator: (value) {
-                            final text = value?.trim() ?? '';
-                            if (text.isEmpty) {
-                              return 'Vui lòng nhập số điện thoại';
-                            }
-                            final digits = text.replaceAll(
-                              RegExp(r'[^0-9]'),
-                              '',
-                            );
-                            if (digits.length < 8) {
-                              return 'Số điện thoại không hợp lệ';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        DropdownButtonFormField<String>(
-                          value: _gender,
-                          decoration: const InputDecoration(
-                            labelText: 'Giới tính',
-                            prefixIcon: Icon(Icons.wc_outlined),
-                            border: OutlineInputBorder(),
-                          ),
-                          items: const [
-                            DropdownMenuItem(value: 'Nam', child: Text('Nam')),
-                            DropdownMenuItem(value: 'Nữ', child: Text('Nữ')),
-                            DropdownMenuItem(
-                              value: 'Khác',
-                              child: Text('Khác'),
-                            ),
-                          ],
-                          onChanged: (value) => setState(() => _gender = value),
-                          validator: (value) {
-                            if ((value ?? '').trim().isEmpty) {
-                              return 'Vui lòng chọn giới tính';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          controller: _addressController,
-                          keyboardType: TextInputType.streetAddress,
-                          textInputAction: TextInputAction.newline,
-                          maxLines: 3,
-                          decoration: const InputDecoration(
-                            labelText: 'Địa chỉ',
-                            prefixIcon: Icon(Icons.location_on_outlined),
-                            border: OutlineInputBorder(),
-                          ),
-                          validator: (value) {
-                            final text = value?.trim() ?? '';
-                            if (text.isEmpty) return 'Vui lòng nhập địa chỉ';
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        Wrap(
-                          spacing: 12,
-                          runSpacing: 12,
-                          alignment: WrapAlignment.end,
-                          children: [
-                            FilledButton.icon(
-                              onPressed: _addProfile,
-                              style: _buttonStyle(context),
-                              icon: const Icon(Icons.add),
-                              label: const Text('Thêm'),
-                            ),
-                            FilledButton.tonalIcon(
-                              onPressed: _hasSelection ? _updateProfile : null,
-                              style: _buttonStyle(context),
-                              icon: const Icon(Icons.edit_outlined),
-                              label: const Text('Sửa'),
-                            ),
-                            OutlinedButton.icon(
-                              onPressed: _hasSelection
-                                  ? _confirmAndDelete
-                                  : null,
-                              style: OutlinedButton.styleFrom(
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                  vertical: 12,
-                                ),
-                                animationDuration: const Duration(
-                                  milliseconds: 140,
-                                ),
-                              ),
-                              icon: const Icon(Icons.delete_outline),
-                              label: const Text('Xóa'),
-                            ),
-                            TextButton.icon(
-                              onPressed: _resetForm,
-                              style: TextButton.styleFrom(
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                  vertical: 12,
-                                ),
-                                animationDuration: const Duration(
-                                  milliseconds: 140,
-                                ),
-                              ),
-                              icon: const Icon(Icons.restart_alt),
-                              label: const Text('Reset'),
-                            ),
-                          ],
-                        ),
-                        AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 180),
-                          child: _hasSelection
-                              ? Padding(
-                                  key: ValueKey<String?>(_selectedId),
-                                  padding: const EdgeInsets.only(top: 12),
-                                  child: Text(
-                                    'Đang chọn: ${_fullNameController.text}',
-                                    style: Theme.of(context).textTheme.bodySmall
-                                        ?.copyWith(color: colorScheme.primary),
-                                  ),
-                                )
-                              : const SizedBox.shrink(),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Card(
-                shape: RoundedRectangleBorder(borderRadius: radius),
-                clipBehavior: Clip.antiAlias,
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
+      appBar: AppBar(title: const Text('Quản lý hồ sơ')),
+      body: Column(
+        children: [
+          // PHẦN FORM NHẬP
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Card(
+              elevation: 4,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Form(
+                  key: _formKey,
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      Text(_editingStudent == null ? "THÊM MỚI" : "SỬA HỒ SƠ", 
+                           style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)),
+                      TextFormField(controller: _nameController, decoration: const InputDecoration(labelText: 'Họ tên')),
+                      TextFormField(controller: _emailController, decoration: const InputDecoration(labelText: 'Email')),
                       Row(
                         children: [
-                          Icon(
-                            Icons.list_alt_outlined,
-                            color: colorScheme.primary,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Danh sách sinh viên',
-                            style: Theme.of(context).textTheme.titleMedium
-                                ?.copyWith(fontWeight: FontWeight.w700),
-                          ),
-                          const Spacer(),
-                          if (_profiles.isNotEmpty)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: colorScheme.primaryContainer,
-                                borderRadius: BorderRadius.circular(999),
-                              ),
-                              child: Text(
-                                '${_profiles.length}',
-                                style: TextStyle(
-                                  color: colorScheme.onPrimaryContainer,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
+                          Expanded(child: TextFormField(controller: _phoneController, decoration: const InputDecoration(labelText: 'Số điện thoại'))),
+                          const SizedBox(width: 10),
+                          DropdownButton<String>(
+                            value: _selectedGender,
+                            onChanged: (v) => setState(() => _selectedGender = v!),
+                            items: ['Nam', 'Nữ'].map((g) => DropdownMenuItem(value: g, child: Text(g))).toList(),
+                          )
                         ],
                       ),
-                      const SizedBox(height: 12),
-                      if (_profiles.isEmpty)
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: colorScheme.surfaceContainerHighest,
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: const Text(
-                            'Chưa có sinh viên nào. Hãy nhập thông tin và bấm “Thêm”.',
-                          ),
-                        )
-                      else
-                        ListView.separated(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: _profiles.length,
-                          separatorBuilder: (context, index) =>
-                              const Divider(height: 1),
-                          itemBuilder: (context, index) {
-                            final p = _profiles[index];
-                            final isSelected = p.id == _selectedId;
-                            final subtitleParts = <String>[
-                              if (p.email.trim().isNotEmpty) p.email.trim(),
-                              if (p.phone.trim().isNotEmpty) p.phone.trim(),
-                              if (p.gender.trim().isNotEmpty) p.gender.trim(),
-                            ];
-
-                            return ListTile(
-                              selected: isSelected,
-                              leading: CircleAvatar(
-                                backgroundColor: isSelected
-                                    ? colorScheme.primaryContainer
-                                    : null,
-                                foregroundColor: isSelected
-                                    ? colorScheme.onPrimaryContainer
-                                    : null,
-                                child: Text(
-                                  p.fullName.isNotEmpty
-                                      ? p.fullName.characters.first
-                                            .toUpperCase()
-                                      : '?',
-                                ),
-                              ),
-                              title: Text(p.fullName),
-                              subtitle: subtitleParts.isEmpty
-                                  ? null
-                                  : Text(subtitleParts.join(' • ')),
-                              trailing: const Icon(Icons.chevron_right),
-                              onTap: () => _loadProfileToForm(p),
-                            );
-                          },
-                        ),
+                      const SizedBox(height: 10),
+                      ElevatedButton(onPressed: _save, child: Text(_editingStudent == null ? 'THÊM' : 'CẬP NHẬT')),
                     ],
                   ),
                 ),
               ),
-            ],
+            ),
           ),
-        ),
+          const Divider(),
+          // PHẦN DANH SÁCH THAO TÁC
+          Expanded(
+            child: _isLoading 
+                ? const Center(child: CircularProgressIndicator())
+                : ListView.builder(
+                    itemCount: _students.length,
+                    itemBuilder: (context, i) {
+                      final s = _students[i];
+                      return ListTile(
+                        title: Text(s.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: Text('${s.gender} - ${s.phone}\n${s.email}'),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(icon: const Icon(Icons.edit, color: Colors.orange), 
+                              onPressed: () => setState(() {
+                                _editingStudent = s;
+                                _nameController.text = s.name;
+                                _emailController.text = s.email ?? '';
+                                _phoneController.text = s.phone ?? '';
+                                _selectedGender = s.gender ?? 'Nam';
+                              })),
+                            IconButton(icon: const Icon(Icons.delete_outline, color: Colors.redAccent), 
+                              onPressed: () => _confirmDelete(s)),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
       ),
-    );
-  }
-}
-
-class _StudentProfile {
-  const _StudentProfile({
-    required this.id,
-    required this.fullName,
-    required this.email,
-    required this.phone,
-    required this.gender,
-    required this.address,
-  });
-
-  final String id;
-  final String fullName;
-  final String email;
-  final String phone;
-  final String gender;
-  final String address;
-
-  _StudentProfile copyWith({
-    String? fullName,
-    String? email,
-    String? phone,
-    String? gender,
-    String? address,
-  }) {
-    return _StudentProfile(
-      id: id,
-      fullName: fullName ?? this.fullName,
-      email: email ?? this.email,
-      phone: phone ?? this.phone,
-      gender: gender ?? this.gender,
-      address: address ?? this.address,
     );
   }
 }

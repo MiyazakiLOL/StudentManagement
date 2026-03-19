@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import 'student_list_page.dart';
 import 'student_profile_page.dart';
 
@@ -33,9 +32,7 @@ class HomePage extends StatelessWidget {
             icon: Icons.person,
             onTap: () {
               Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const StudentProfileManagementPage(),
-                ),
+                MaterialPageRoute(builder: (_) => const StudentProfileManagementPage()),
               );
             },
           ),
@@ -97,17 +94,9 @@ class _FeatureCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      title,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    Text(title, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
                     const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
+                    Text(subtitle, style: Theme.of(context).textTheme.bodyMedium),
                   ],
                 ),
               ),

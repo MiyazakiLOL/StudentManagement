@@ -1,7 +1,5 @@
 import 'dart:convert';
-
 import 'package:http/http.dart' as http;
-
 import '../models/student.dart';
 
 class StudentApi {
@@ -15,81 +13,75 @@ class StudentApi {
   final String studentsPath;
   final http.Client _client;
 
-  static const Duration _defaultTimeout = Duration(seconds: 8);
+  static const Duration _timeout = Duration(seconds: 8);
 
   Uri _resolve(String path) {
     final base = Uri.parse(baseUrl);
+    final uri = Uri.parse(path);
 
-    // If path is already absolute (e.g. https://host/api/students), use it.
-    final maybeAbsolute = Uri.tryParse(path);
-    if (maybeAbsolute != null && maybeAbsolute.hasScheme) return maybeAbsolute;
-
-    // Otherwise join with base.
-    final normalizedPath = path.startsWith('/') ? path : '/$path';
-    return base.replace(path: '${base.path}$normalizedPath');
+    if (uri.hasScheme) return uri;
+    return base.resolve(path);
   }
 
   Future<List<Student>> fetchStudents() async {
     final uri = _resolve(studentsPath);
 
-    late final http.Response response;
-    try {
-      response = await _client
-          .get(uri, headers: const {'Accept': 'application/json'})
-          .timeout(_defaultTimeout);
-    } on StudentApiException {
-      rethrow;
-    } catch (e) {
-      throw StudentApiException('Request failed when GET $uri: $e');
+    final res = await _client.get(uri).timeout(_timeout);
+
+    if (res.statusCode != 200) {
+      throw Exception('Lỗi load dữ liệu');
     }
 
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw StudentApiException(
-        'HTTP ${response.statusCode} when GET $uri',
-        statusCode: response.statusCode,
-        body: response.body,
-      );
+    final data = jsonDecode(res.body);
+
+    if (data is List) {
+      return data.map((e) => Student.fromJson(e)).toList();
     }
 
-    late final dynamic decoded;
-    try {
-      decoded = jsonDecode(utf8.decode(response.bodyBytes));
-    } catch (e) {
-      throw StudentApiException('Invalid JSON when GET $uri: $e');
+    if (data['data'] != null) {
+      return (data['data'] as List)
+          .map((e) => Student.fromJson(e))
+          .toList();
     }
 
-    final list = _extractList(decoded);
-
-    return list
-        .whereType<Map<String, dynamic>>()
-        .map(Student.fromJson)
-        .toList(growable: false);
+    throw Exception('Sai format JSON');
   }
 
-  List<dynamic> _extractList(dynamic decoded) {
-    if (decoded is List) return decoded;
-    if (decoded is Map<String, dynamic>) {
-      final candidates = [
-        decoded['data'],
-        decoded['students'],
-        decoded['items'],
-        decoded['result'],
-      ];
-      for (final c in candidates) {
-        if (c is List) return c;
-      }
+  Future<void> createStudent(Student s) async {
+    final uri = _resolve(studentsPath);
+
+    final res = await _client.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(s.toJson()),
+    );
+
+    if (res.statusCode != 201 && res.statusCode != 200) {
+      throw Exception('Thêm thất bại');
     }
-    throw const StudentApiException('Unexpected JSON shape for students list');
   }
-}
 
-class StudentApiException implements Exception {
-  const StudentApiException(this.message, {this.statusCode, this.body});
+  Future<void> updateStudent(Student s) async {
+    final uri = _resolve('$studentsPath/${s.id}');
 
-  final String message;
-  final int? statusCode;
-  final String? body;
+    final res = await _client.put(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(s.toJson()),
+    );
 
-  @override
-  String toString() => 'StudentApiException($message)';
+    if (res.statusCode != 200) {
+      throw Exception('Cập nhật thất bại');
+    }
+  }
+
+  Future<void> deleteStudent(int id) async {
+    final uri = _resolve('$studentsPath/$id');
+
+    final res = await _client.delete(uri);
+
+    if (res.statusCode != 200) {
+      throw Exception('Xóa thất bại');
+    }
+  }
 }
