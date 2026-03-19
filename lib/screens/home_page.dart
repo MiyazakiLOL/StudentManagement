@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'student_list_page.dart';
 import 'student_profile_page.dart';
+import 'student_search_page.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -59,7 +60,11 @@ class HomePage extends StatelessWidget {
             title: 'Tìm kiếm / Phân loại',
             subtitle: 'Tìm nhanh và lọc theo tiêu chí',
             icon: Icons.search,
-            onTap: () => _showComingSoon(context),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const StudentSearchPage()),
+              );
+            },
           ),
         ],
       ),
