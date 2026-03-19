@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'student_list_page.dart';
+import 'student_profile_page.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -28,13 +29,19 @@ class HomePage extends StatelessWidget {
         children: [
           _FeatureCard(
             title: 'Quản lý hồ sơ',
-            subtitle: 'Thêm/sửa thông tin sinh viên',
+            subtitle: 'Thêm/sửa/xóa hồ sơ sinh viên',
             icon: Icons.person,
-            onTap: () => _showComingSoon(context),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const StudentProfileManagementPage(),
+                ),
+              );
+            },
           ),
           _FeatureCard(
             title: 'Danh sách sinh viên',
-            subtitle: 'Xem và quản lý danh sách',
+            subtitle: 'Xem danh sách từ API',
             icon: Icons.list_alt,
             onTap: () {
               Navigator.of(context).push(
@@ -77,6 +84,7 @@ class _FeatureCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       child: InkWell(
         onTap: onTap,
         child: Padding(
