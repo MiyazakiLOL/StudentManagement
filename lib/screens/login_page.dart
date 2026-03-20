@@ -12,6 +12,8 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+  final _emailController = TextEditingController();
   bool _isRegistering = false;
 
   Future<void> _handleAuth() async {
@@ -24,6 +26,19 @@ class _LoginPageState extends State<LoginPage> {
     }
 
     if (_isRegistering) {
+      final confirmPass = _confirmPasswordController.text.trim();
+      final email = _emailController.text.trim();
+
+      if (email.isEmpty || confirmPass.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vui lòng nhập đầy đủ thông tin')));
+        return;
+      }
+
+      if (pass != confirmPass) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Mật khẩu xác nhận không khớp')));
+        return;
+      }
+
       final success = await AuthService.register(user, pass);
       if (success) {
         setState(() => _isRegistering = false);
@@ -51,9 +66,22 @@ class _LoginPageState extends State<LoginPage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.school_rounded, size: 80, color: Color(0xFF6750A4)),
+              Icon(
+                _isRegistering ? Icons.person_add_alt_1_rounded : Icons.school_rounded, 
+                size: 80, 
+                color: const Color(0xFF6750A4)
+              ),
               const SizedBox(height: 16),
-              const Text('STUDENT MANAGER', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFF6750A4))),
+              Text(
+                _isRegistering ? 'TẠO TÀI KHOẢN' : 'STUDENT MANAGER', 
+                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFF6750A4))
+              ),
+              const SizedBox(height: 8),
+              if (_isRegistering)
+                const Text(
+                  'Tham gia cùng chúng tôi ngay hôm nay!',
+                  style: TextStyle(color: Colors.grey, fontSize: 14),
+                ),
               const SizedBox(height: 32),
               TextField(
                 controller: _usernameController,
@@ -65,6 +93,20 @@ class _LoginPageState extends State<LoginPage> {
                   fillColor: Colors.white,
                 ),
               ),
+              if (_isRegistering) ...[
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: InputDecoration(
+                    labelText: 'Email liên hệ',
+                    prefixIcon: const Icon(Icons.email),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    filled: true,
+                    fillColor: Colors.white,
+                  ),
+                ),
+              ],
               const SizedBox(height: 16),
               TextField(
                 controller: _passwordController,
@@ -77,6 +119,20 @@ class _LoginPageState extends State<LoginPage> {
                   fillColor: Colors.white,
                 ),
               ),
+              if (_isRegistering) ...[
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _confirmPasswordController,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'Xác nhận mật khẩu',
+                    prefixIcon: const Icon(Icons.lock_clock),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    filled: true,
+                    fillColor: Colors.white,
+                  ),
+                ),
+              ],
               const SizedBox(height: 32),
               SizedBox(
                 width: double.infinity,
@@ -88,15 +144,33 @@ class _LoginPageState extends State<LoginPage> {
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  child: Text(_isRegistering ? 'ĐĂNG KÝ' : 'ĐĂNG NHẬP', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  child: Text(_isRegistering ? 'ĐĂNG KÝ NGAY' : 'ĐĂNG NHẬP', style: const TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ),
-              TextButton(
-                onPressed: () => setState(() => _isRegistering = !_isRegistering),
-                child: Text(_isRegistering ? 'Đã có tài khoản? Đăng nhập' : 'Chưa có tài khoản? Đăng ký ngay'),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(_isRegistering ? 'Đã có tài khoản?' : 'Chưa có tài khoản?'),
+                  TextButton(
+                    onPressed: () => setState(() {
+                      _isRegistering = !_isRegistering;
+                      _usernameController.clear();
+                      _passwordController.clear();
+                      _confirmPasswordController.clear();
+                      _emailController.clear();
+                    }),
+                    child: Text(
+                      _isRegistering ? 'Đăng nhập' : 'Đăng ký ngay',
+                      style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF6750A4)),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 20),
-              const Text('Mặc định: admin / admin', style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic)),
+              if (!_isRegistering) ...[
+                const SizedBox(height: 20),
+                const Text('Mặc định: admin / admin', style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic)),
+              ]
             ],
           ),
         ),
