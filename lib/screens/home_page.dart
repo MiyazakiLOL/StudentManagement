@@ -1,18 +1,11 @@
 import 'package:flutter/material.dart';
 import 'student_list_page.dart';
 import 'student_profile_page.dart';
+import 'student_search_page.dart';
+import 'study_info_screen.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
-
-  void _showComingSoon(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Tính năng đang phát triển'),
-        duration: Duration(seconds: 2),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +13,7 @@ class HomePage extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('TH5 - Nhóm 3 - Student Manager'),
+        title: const Text('TH5 - Nhóm G3_C4 - Student Manager'),
         backgroundColor: colorScheme.inversePrimary,
       ),
       body: ListView(
@@ -50,13 +43,21 @@ class HomePage extends StatelessWidget {
             title: 'Thông tin học tập',
             subtitle: 'Điểm số, môn học, học kỳ',
             icon: Icons.school,
-            onTap: () => _showComingSoon(context),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const StudyInfoScreen()),
+              );
+            },
           ),
           _FeatureCard(
             title: 'Tìm kiếm / Phân loại',
             subtitle: 'Tìm nhanh và lọc theo tiêu chí',
             icon: Icons.search,
-            onTap: () => _showComingSoon(context),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const StudentSearchPage()),
+              );
+            },
           ),
         ],
       ),
