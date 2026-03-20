@@ -174,20 +174,59 @@ class _StudentProfileManagementPageState extends State<StudentProfileManagementP
                 key: _formKey,
                 child: Column(
                   children: [
-                    TextFormField(controller: _codeController, decoration: _inputStyle('MSSV'), style: const TextStyle(fontWeight: FontWeight.w600)),
+                    TextFormField(
+                      controller: _codeController, 
+                      decoration: _inputStyle('MSSV'), 
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) return 'Vui lòng nhập MSSV';
+                        if (value.length < 5) return 'MSSV không hợp lệ';
+                        return null;
+                      },
+                    ),
                     const SizedBox(height: 16),
-                    TextFormField(controller: _nameController, decoration: _inputStyle('Họ tên'), style: const TextStyle(fontWeight: FontWeight.w600)),
+                    TextFormField(
+                      controller: _nameController, 
+                      decoration: _inputStyle('Họ tên'), 
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) return 'Vui lòng nhập họ tên';
+                        return null;
+                      },
+                    ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<String>(
                       value: _selectedClass,
                       decoration: _inputStyle('Lớp (Dữ liệu học tập)'),
                       items: _classList.map((c) => DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)))).toList(),
                       onChanged: (v) => setState(() => _selectedClass = v!),
+                      validator: (value) => value == null ? 'Vui lòng chọn lớp' : null,
                     ),
                     const SizedBox(height: 16),
-                    TextFormField(controller: _emailController, decoration: _inputStyle('Email'), style: const TextStyle(fontWeight: FontWeight.w600)),
+                    TextFormField(
+                      controller: _emailController, 
+                      decoration: _inputStyle('Email'), 
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                      keyboardType: TextInputType.emailAddress,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) return 'Vui lòng nhập email';
+                        final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+                        if (!emailRegex.hasMatch(value)) return 'Email không đúng định dạng';
+                        return null;
+                      },
+                    ),
                     const SizedBox(height: 16),
-                    TextFormField(controller: _phoneController, decoration: _inputStyle('SĐT'), style: const TextStyle(fontWeight: FontWeight.w600)),
+                    TextFormField(
+                      controller: _phoneController, 
+                      decoration: _inputStyle('SĐT'), 
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                      keyboardType: TextInputType.phone,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) return 'Vui lòng nhập số điện thoại';
+                        if (!RegExp(r'^\d{10}$').hasMatch(value)) return 'SĐT phải có 10 chữ số';
+                        return null;
+                      },
+                    ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<String>(
                       value: _selectedGender,
