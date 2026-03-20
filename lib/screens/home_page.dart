@@ -6,14 +6,37 @@ import 'student_profile_page.dart';
 import 'student_search_page.dart';
 import 'study_info_screen.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  String _username = "Người dùng";
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUser();
+  }
+
+  Future<void> _loadUser() async {
+    final user = await AuthService.getCurrentUser();
+    if (user != null && mounted) {
+      setState(() {
+        _username = user;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF7F2FA),
       appBar: AppBar(
         title: const Text('TH5 - Student Manager', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         backgroundColor: colorScheme.inversePrimary,
@@ -35,6 +58,55 @@ class HomePage extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          // Khung chào mừng
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            margin: const EdgeInsets.only(bottom: 24),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF6750A4), Color(0xFF9581CD)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF6750A4).withOpacity(0.3),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Chào mừng,',
+                      style: TextStyle(color: Colors.white70, fontSize: 16),
+                    ),
+                    Text(
+                      _username,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                const Icon(
+                  Icons.waving_hand_rounded,
+                  color: Colors.white,
+                  size: 40,
+                ),
+              ],
+            ),
+          ),
+
           _FeatureCard(
             title: 'Quản lý hồ sơ',
             subtitle: 'Thêm/sửa/xóa hồ sơ sinh viên',

@@ -16,9 +16,15 @@ class AuthService {
     return Map<String, String>.from(jsonDecode(data));
   }
 
+  // Lấy tên user hiện tại
+  static Future<String?> getCurrentUser() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_currentUserKey);
+  }
+
   // Đăng ký
   static Future<bool> register(String username, String password) async {
-    final users = await _getUsers();
+    final Map<String, dynamic> users = await _getUsers();
     if (users.containsKey(username)) return false; // User đã tồn tại
 
     users[username] = password;
