@@ -11,7 +11,7 @@ import 'package:student_management/main.dart';
 
 void main() {
   testWidgets('Home page renders key sections', (WidgetTester tester) async {
-    await tester.pumpWidget(const MyApp());
+    await tester.pumpWidget(const MyApp(isLoggedIn: true));
 
     expect(find.text('TH5 - Nhóm 3 - Student Manager'), findsOneWidget);
 
