@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
+import '../services/student_api.dart';
+import '../config/app_config.dart';
 import 'login_page.dart';
 import 'student_list_page.dart';
 import 'student_profile_page.dart';
 import 'student_search_page.dart';
 import 'study_info_screen.dart';
+import 'study_info.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -15,18 +18,28 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   String _username = "Người dùng";
+  int _studentCount = 0;
+  int _subjectCount = 0;
+  int _classCount = 0;
 
   @override
   void initState() {
     super.initState();
-    _loadUser();
+    _loadData();
   }
 
-  Future<void> _loadUser() async {
+  Future<void> _loadData() async {
     final user = await AuthService.getCurrentUser();
-    if (user != null && mounted) {
+    await StudyInfo.loadFromLocal();
+    final api = StudentApi(baseUrl: AppConfig.apiBaseUrl, studentsPath: AppConfig.studentsPath);
+    final students = await api.fetchStudents();
+
+    if (mounted) {
       setState(() {
-        _username = user;
+        if (user != null) _username = user;
+        _studentCount = students.length;
+        _subjectCount = StudyInfo.listStudy.length;
+        _classCount = StudyInfo.listClass.length;
       });
     }
   }
@@ -38,7 +51,7 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF7F2FA),
       appBar: AppBar(
-        title: const Text('TH5 - Student Manager', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        title: const Text('TH5 - G3_C4 - Student Manager', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         backgroundColor: colorScheme.inversePrimary,
         actions: [
           IconButton(
@@ -78,35 +91,50 @@ class _HomePageState extends State<HomePage> {
                 ),
               ],
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Column(
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'Chào mừng,',
-                      style: TextStyle(color: Colors.white70, fontSize: 16),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Chào mừng,',
+                          style: TextStyle(color: Colors.white70, fontSize: 16),
+                        ),
+                        Text(
+                          _username,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
-                    Text(
-                      _username,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    const Icon(
+                      Icons.waving_hand_rounded,
+                      color: Colors.white,
+                      size: 40,
                     ),
                   ],
                 ),
-                const Icon(
-                  Icons.waving_hand_rounded,
-                  color: Colors.white,
-                  size: 40,
+                const SizedBox(height: 20),
+                const Divider(color: Colors.white24, height: 1),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildStatItem('Sinh viên', _studentCount.toString()),
+                    _buildStatItem('Môn học', _subjectCount.toString()),
+                    _buildStatItem('Lớp', _classCount.toString()),
+                  ],
                 ),
               ],
             ),
           ),
-
+          
           _FeatureCard(
             title: 'Quản lý hồ sơ',
             subtitle: 'Thêm/sửa/xóa hồ sơ sinh viên',
@@ -114,7 +142,7 @@ class _HomePageState extends State<HomePage> {
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const StudentProfileManagementPage()),
-              );
+              ).then((_) => _loadData());
             },
           ),
           _FeatureCard(
@@ -124,7 +152,7 @@ class _HomePageState extends State<HomePage> {
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const StudentListPage()),
-              );
+              ).then((_) => _loadData());
             },
           ),
           _FeatureCard(
@@ -134,7 +162,7 @@ class _HomePageState extends State<HomePage> {
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const StudyInfoScreen()),
-              );
+              ).then((_) => _loadData());
             },
           ),
           _FeatureCard(
@@ -144,11 +172,26 @@ class _HomePageState extends State<HomePage> {
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const StudentSearchPage()),
-              );
+              ).then((_) => _loadData());
             },
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildStatItem(String label, String value) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+        Text(
+          label,
+          style: const TextStyle(color: Colors.white70, fontSize: 12),
+        ),
+      ],
     );
   }
 }
