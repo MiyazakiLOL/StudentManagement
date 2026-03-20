@@ -9,17 +9,22 @@ class StudyInfoScreen extends StatefulWidget {
 }
 
 class _StudyInfoScreenState extends State<StudyInfoScreen> {
-  // Danh sách ban đầu (có thể thay đổi được)
-  final List<StudyInfo> listStudy = [
-    StudyInfo(subjectName: "Lập trình Flutter", semester: "Học kỳ 1 - 2026", score: "8.5"),
-  ];
-
-  // Các Controller để lấy dữ liệu từ ô nhập
   final TextEditingController nameController = TextEditingController();
   final TextEditingController semesterController = TextEditingController();
   final TextEditingController scoreController = TextEditingController();
 
-  // Hàm hiển thị hộp thoại để thêm môn học
+  @override
+  void initState() {
+    super.initState();
+    // Tải dữ liệu từ local khi vào màn hình
+    _initData();
+  }
+
+  Future<void> _initData() async {
+    await StudyInfo.loadFromLocal();
+    setState(() {});
+  }
+
   void _showAddDialog() {
     showDialog(
       context: context,
@@ -36,18 +41,19 @@ class _StudyInfoScreenState extends State<StudyInfoScreen> {
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text("Hủy")),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               setState(() {
-                listStudy.add(StudyInfo(
+                StudyInfo.listStudy.add(StudyInfo(
                   subjectName: nameController.text,
                   semester: semesterController.text,
                   score: scoreController.text,
                 ));
               });
+              await StudyInfo.saveToLocal(); // Lưu offline
               nameController.clear();
               semesterController.clear();
               scoreController.clear();
-              Navigator.pop(context);
+              if (mounted) Navigator.pop(context);
             },
             child: const Text("Lưu"),
           ),
@@ -60,25 +66,32 @@ class _StudyInfoScreenState extends State<StudyInfoScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Thông tin học tập"),
+        title: const Text("Thông tin học tập", style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w500)),
         backgroundColor: const Color(0xFFEADDFF),
         centerTitle: true,
+        elevation: 0,
       ),
-      body: listStudy.isEmpty 
-        ? const Center(child: Text("Chưa có môn học nào. Nhấn + để thêm."))
+      body: StudyInfo.listStudy.isEmpty 
+        ? const Center(child: CircularProgressIndicator())
         : ListView.builder(
             padding: const EdgeInsets.all(16),
-            itemCount: listStudy.length,
+            itemCount: StudyInfo.listStudy.length,
             itemBuilder: (context, index) {
-              final item = listStudy[index];
+              final item = StudyInfo.listStudy[index];
               return Card(
+                elevation: 0,
+                color: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: const BorderSide(color: Colors.black12, width: 0.5)
+                ),
                 child: ListTile(
                   title: Text(item.subjectName, style: const TextStyle(fontWeight: FontWeight.bold)),
                   subtitle: Text(item.semester),
-                  trailing: Text(item.score, style: const TextStyle(fontSize: 18, color: Colors.blue, fontWeight: FontWeight.bold)),
-                  onLongPress: () {
-                    // Nhấn giữ lâu để xóa
-                    setState(() { listStudy.removeAt(index); });
+                  trailing: Text(item.score, style: const TextStyle(fontSize: 18, color: Color(0xFF6750A4), fontWeight: FontWeight.bold)),
+                  onLongPress: () async {
+                    setState(() { StudyInfo.listStudy.removeAt(index); });
+                    await StudyInfo.saveToLocal(); // Lưu offline sau khi xóa
                   },
                 ),
               );
@@ -86,7 +99,8 @@ class _StudyInfoScreenState extends State<StudyInfoScreen> {
           ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddDialog,
-        child: const Icon(Icons.add),
+        backgroundColor: const Color(0xFFEADDFF),
+        child: const Icon(Icons.add, color: Color(0xFF21005D)),
       ),
     );
   }
