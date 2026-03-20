@@ -21,7 +21,8 @@ class _StudentProfileManagementPageState extends State<StudentProfileManagementP
   String _selectedGender = 'Nam';
   String? _selectedClass;
   
-  List<String> get _classList => StudyInfo.listStudy.map((e) => e.subjectName).toSet().toList();
+  // Lấy danh sách lớp từ StudyInfo.listClass thay vì listStudy
+  List<String> get _classList => StudyInfo.listClass.map((e) => e.className).toSet().toList();
   final List<String> _genderList = ['Nam', 'Nữ'];
 
   late final StudentApi _api;
@@ -36,7 +37,6 @@ class _StudentProfileManagementPageState extends State<StudentProfileManagementP
   }
 
   Future<void> _initData() async {
-    // Đảm bảo load dữ liệu học tập offline trước
     await StudyInfo.loadFromLocal();
     if (_classList.isNotEmpty) {
       _selectedClass = _classList[0];
@@ -197,7 +197,8 @@ class _StudentProfileManagementPageState extends State<StudentProfileManagementP
                     const SizedBox(height: 16),
                     DropdownButtonFormField<String>(
                       value: _selectedClass,
-                      decoration: _inputStyle('Lớp (Dữ liệu học tập)'),
+                      decoration: _inputStyle('Lớp'),
+                      // Dữ liệu giờ đây lấy từ danh sách Lớp (Tab Lớp)
                       items: _classList.map((c) => DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)))).toList(),
                       onChanged: (v) => setState(() => _selectedClass = v!),
                       validator: (value) => value == null ? 'Vui lòng chọn lớp' : null,
